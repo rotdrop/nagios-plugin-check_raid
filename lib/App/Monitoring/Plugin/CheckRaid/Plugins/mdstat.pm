@@ -123,9 +123,9 @@ sub parse {
 		# [=>...................]  check =  8.8% (34390144/390443648) finish=194.2min speed=30550K/sec
 		my ($action, $perc, $eta, $speed) = ("none", 0, 0, 0);
 		if (($action, $perc, $eta, $speed) = m{(resync|recovery|reshape)\s+=\s+([\d.]+)% \(\d+/\d+\) finish=([\d.]+)min speed=(\d+)K/sec}) {
-			$md{resync_status} = "$action:${perc}% ${speed}KiB ETA: ${eta}min";
+			$md{resync_status} = "$action:${perc}% ${speed}KiB/s ETA: ${eta}min";
 		} elsif (($perc, $eta, $speed) = m{check\s+=\s+([\d.]+)% \(\d+/\d+\) finish=([\d.]+)min speed=(\d+)K/sec}) {
-			$md{check_status} = "check:${perc}% ${speed}KiB ETA: ${eta}min";
+			$md{check_status} = "check:${perc}% ${speed}KiB/s ETA: ${eta}min";
 			$action = "check";
 			$arr_checking = 1;
 		}
@@ -134,7 +134,7 @@ sub parse {
 			my @perf_data;
 			foreach ('check', 'resync', 'recovery', 'reshape') {
 				if ($action eq $_) {
-					push(@perf_data, sprintf "'%1\$s completed'=%2\$s%%;;;0;100 '%1\$s speed'=%3\$sMiB;;;; '%1\$s eta'=%4\$smin;;;;", $action, $perc, $speed / 1024.0, $eta);
+					push(@perf_data, sprintf "'%1\$s completed'=%2\$s%%;;;0;100 '%1\$s speed'=%3\$sMiB/s;;;; '%1\$s eta'=%4\$smin;;;;", $action, $perc, $speed / 1024.0, $eta);
 				} else {
 					push(@perf_data, sprintf "'%1\$s completed'=U;;;0;100 '%1\$s speed'=U;;;; '%1\$s eta'=U;;;;", $_);
 				}
