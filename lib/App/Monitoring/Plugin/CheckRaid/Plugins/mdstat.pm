@@ -5,7 +5,7 @@ package App::Monitoring::Plugin::CheckRaid::Plugins::mdstat;
 use base 'App::Monitoring::Plugin::CheckRaid::Plugin';
 use strict;
 use warnings;
-
+		   
 sub commands {
 	{
 		'mdstat' => ['<', '/proc/mdstat'],
@@ -121,12 +121,25 @@ sub parse {
 		# linux-2.6.33/drivers/md/md.c, status_resync
 		# [==>..................]  resync = 13.0% (95900032/732515712) finish=175.4min speed=60459K/sec
 		# [=>...................]  check =  8.8% (34390144/390443648) finish=194.2min speed=30550K/sec
-		if (my($action, $perc, $eta, $speed) = m{(resync|recovery|reshape)\s+=\s+([\d.]+%) \(\d+/\d+\) finish=([\d.]+min) speed=(\d+K/sec)}) {
-			$md{resync_status} = "$action:$perc $speed ETA: $eta";
-			next;
-		} elsif (($perc, $eta, $speed) = m{check\s+=\s+([\d.]+%) \(\d+/\d+\) finish=([\d.]+min) speed=(\d+K/sec)}) {
-			$md{check_status} = "check:$perc $speed ETA: $eta";
+		my ($action, $perc, $eta, $speed) = ("none", 0, 0, 0);
+		if (($action, $perc, $eta, $speed) = m{(resync|recovery|reshape)\s+=\s+([\d.]+)% \(\d+/\d+\) finish=([\d.]+)min speed=(\d+)K/sec}) {
+			$md{resync_status} = "$action:${perc}% ${speed}KiB ETA: ${eta}min";
+		} elsif (($perc, $eta, $speed) = m{check\s+=\s+([\d.]+)% \(\d+/\d+\) finish=([\d.]+)min speed=(\d+)K/sec}) {
+			$md{check_status} = "check:${perc}% ${speed}KiB ETA: ${eta}min";
+			$action = "check";
 			$arr_checking = 1;
+		}
+
+		if ($action && $action ne "none") {
+			my @perf_data;
+			foreach ('check', 'resync', 'recovery', 'reshape') {
+				if ($action eq $_) {
+					push(@perf_data, sprintf "'%1\$s completed'=%2\$s%%;;;0;100 '%1\$s speed'=%3\$sKiB;;;; '%1\$s eta'=%4\$smin;;;;", $action, $perc, $speed, $eta);
+				} else {
+					push(@perf_data, sprintf "'%1\$s completed'=U;;;0;100 '%1\$s speed'=U;;;; '%1\$s eta'=U;;;;", $_);
+				}
+			}
+			$md{perf_data} = join(' ', @perf_data);
 			next;
 		}
 
@@ -159,6 +172,7 @@ sub check {
 	my $this = shift;
 
 	my (@status);
+	my (@perf_data);
 	my @md = $this->parse;
 
 	my @spare_options = ();
@@ -227,6 +241,10 @@ sub check {
 			$s .= "$md{status}";
 		}
 		push(@status, $s);
+
+		if ($md{perf_data}) {
+			push(@perf_data, $md{perf_data});
+		}
 	}
 
 	if (scalar @spare_options > 0)
@@ -246,6 +264,7 @@ sub check {
 	$this->ok;
 
 	$this->message(join(', ', @status));
+	$this->perfdata(join(' ', @perf_data));
 }
 
 1;
