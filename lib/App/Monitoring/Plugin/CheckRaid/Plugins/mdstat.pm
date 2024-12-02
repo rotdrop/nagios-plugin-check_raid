@@ -134,7 +134,7 @@ sub parse {
 			my @perf_data;
 			foreach ('check', 'resync', 'recovery', 'reshape') {
 				if ($action eq $_) {
-					push(@perf_data, sprintf "'%1\$s completed'=%2\$s%%;;;0;100 '%1\$s speed'=%3\$sKiB;;;; '%1\$s eta'=%4\$smin;;;;", $action, $perc, $speed, $eta);
+					push(@perf_data, sprintf "'%1\$s completed'=%2\$s%%;;;0;100 '%1\$s speed'=%3\$sMiB;;;; '%1\$s eta'=%4\$smin;;;;", $action, $perc, $speed / 1024.0, $eta);
 				} else {
 					push(@perf_data, sprintf "'%1\$s completed'=U;;;0;100 '%1\$s speed'=U;;;; '%1\$s eta'=U;;;;", $_);
 				}
